@@ -4,9 +4,33 @@
 
 <script>
   import FilePond from "svelte-filepond";
+  import {createAccount} from '@planetarium/account-raw';
+  import {onMount} from "svelte";
+  import {connectRpc} from "../utils/rpc.js";
+  import {deriveAddress} from "@planetarium/sign";
 
   let pond;
   let name = "filepond";
+  let showPrivateKey = false;
+  $: type = showPrivateKey ? "text" : "password";
+  let mainnet;
+  let privateKey = "";
+
+  onMount(async () => {
+    mainnet = await connectRpc();
+    // console.log(decode(Buffer.from('du1:ai1eu1:bi2ee')));
+  });
+
+  $: gqlNodeMap = {
+    "local": "http://localhost",
+    "previewnet": "previewnet",
+    "mainnet": mainnet
+  };
+  let network;
+
+  const handlePrivateKeyInput = (e) => {
+    privateKey = e.target.value;
+  };
 
   const handleInit = () => {
     console.log("Filepond initialized");
@@ -76,8 +100,37 @@
 
   const handleRemoveFile = (err, fileItem) => {
     const table = document.getElementById("csv-table");
-    console.log(`File ${fileItem.fileName} unloaded`);
+    console.log(`File ${fileItem.file.name} unloaded`);
     table.innerHTML = "";
+  };
+
+  const handleSelectNetwork = (e) => {
+    console.log(e.target.value);
+    network = gqlNodeMap[e.target.value];
+    console.log(network);
+  };
+
+  const sign = async () => {
+    console.log(privateKey);
+    const account = createAccount(privateKey);
+    console.log(account);
+    const address = await deriveAddress(account);
+    console.log(`address: ${address}`);
+    const query = `{transaction {nextTxNonce(address: "${address}")}}`;
+    const resp = await fetch(
+      `http://${network}/graphql`,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({query: query})
+      }
+    );
+    if (resp.status === 200) {
+      console.log(await resp.json());
+    } else {
+      console.log(`Fetch failed: ${resp.status}`);
+      console.log(await resp.text());
+    }
   };
 </script>
 
@@ -92,11 +145,24 @@
                   oninit={handleInit} onaddfile={handleAddFile}
                   onremovefile={handleRemoveFile}
         />
-        <div class="contents w-1/2">
-            <table id="csv-table"></table>
-        </div>
+        <table id="csv-table"></table>
     </div>
     <div class="sign-part flex-1 w-1/2">
-        sign here
+        <div>
+            <label for="network" class="block text-sm font-medium text-gray-700">Country</label>
+            <select on:change={handleSelectNetwork} id="network" name="network" autocomplete="country-name"
+                    class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
+                <option value="local">Local Node</option>
+                <option value="previewnet">Previewnet</option>
+                <option value="mainnet">Mainnet</option>
+            </select>
+        </div>
+        <div>
+            <label for="private-key">PrivateKey</label>
+            <input id="private-key" class="block w-full rounded-md broder-gray-300 "
+                   {type} {privateKey} on:input={handlePrivateKeyInput}>
+        </div>
+        <button on:click={() => showPrivateKey = !showPrivateKey}>{showPrivateKey ? "Hide" : "Show"}</button>
+        <button on:click={sign}>sign</button>
     </div>
 </div>

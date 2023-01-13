@@ -1,7 +1,10 @@
-import { sveltekit } from '@sveltejs/kit/vite';
+import {defineConfig} from 'vite'
+import {nodePolyfills} from 'vite-plugin-node-polyfills'
+import {sveltekit} from '@sveltejs/kit/vite';
 
-const config = {
-	plugins: [sveltekit()]
-};
-
-export default config;
+export default defineConfig({
+  plugins: [
+    nodePolyfills({protocolImports: true}),
+    sveltekit(),
+  ]
+});

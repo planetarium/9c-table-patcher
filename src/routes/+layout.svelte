@@ -8,6 +8,6 @@
     @import 'filepond/dist/filepond.css';
     body {
         margin: auto;
-        width: 1024px;
+        width: 1440px;
     }
 </style>
