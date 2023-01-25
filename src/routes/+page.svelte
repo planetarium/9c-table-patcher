@@ -6,163 +6,231 @@
   import FilePond from "svelte-filepond";
   import {createAccount} from '@planetarium/account-raw';
   import {onMount} from "svelte";
-  import {connectRpc} from "../utils/rpc.js";
-  import {deriveAddress} from "@planetarium/sign";
+  import {connectRpc} from "../utils/network.js";
+  import {signTransaction} from "@planetarium/sign";
+  import {DateTime} from "luxon";
+  import {parseCsv} from "../utils/util.js";
+  import {
+    Alert,
+    Button,
+    Heading,
+    Input,
+    Label,
+    Select,
+    Spinner,
+    Table,
+    TableBody,
+    TableBodyCell,
+    TableBodyRow,
+    TableHead,
+    TableHeadCell,
+    Textarea
+  } from "flowbite-svelte";
+  import {handleAddFile, handleInit, handleRemoveFile} from "../utils/filepond.js";
+  import {createActionTx, stageTransaction, waitForMining} from "../utils/gql.js";
+  import {CircleExclamationSolid, EyeRegular} from "svelte-awesome-icons";
 
   let pond;
   let name = "filepond";
   let showPrivateKey = false;
   $: type = showPrivateKey ? "text" : "password";
-  let mainnet;
+
+  let localnet = "";
+  const previewnet = "";
+  let mainnet = "";
+  let selectedNetwork;
+  $: enableLocal = selectedNetwork === "local";
+  const gqlNodeList = [
+    {value: "local", name: "Local Network"},
+    {value: "previewnet", name: "Preview Network"},
+    {value: "mainnet", name: "Mainnet"}
+  ];
+  $: gqlNodeMap = {
+    local: localnet,
+    previewnet: previewnet,
+    mainnet: mainnet
+  };
+
   let privateKey = "";
+  let account;
+  let validPrivateKey;
+  $: {
+    try {
+      account = createAccount(privateKey);
+      validPrivateKey = true;
+    } catch (e) {
+      validPrivateKey = false;
+    }
+  }
+  $: account = privateKey ? createAccount(privateKey) : null;
+
+  let csvName = null;
+  let csvData = null;
+  $: thead = parseCsv(csvData)[0] ?? [];
+  $: tbody = parseCsv(csvData).slice(1) ?? [];
+
+  let validUntil = DateTime.utc().set({hour: 0, minute: 0, second: 0}).plus({days: 30});
+
+  let signedTx = "";
+  let txId = null;
+
+  let signed = false;
+  let showSigned = false;
+  let deployInProgress = false;
+
+  const reset = () => {
+    csvName = null;
+    csvData = null;
+    signed = false;
+    showSigned = false;
+    signedTx = "";
+    txId = null;
+    pond.removeFiles();
+  }
 
   onMount(async () => {
     mainnet = await connectRpc();
-    // console.log(decode(Buffer.from('du1:ai1eu1:bi2ee')));
   });
 
-  $: gqlNodeMap = {
-    "local": "http://localhost",
-    "previewnet": "previewnet",
-    "mainnet": mainnet
-  };
-  let network;
-
-  const handlePrivateKeyInput = (e) => {
-    privateKey = e.target.value;
-  };
-
-  const handleInit = () => {
-    console.log("Filepond initialized");
-  };
-
-  const handleAddFile = async (err, fileItem) => {
-    const table = document.getElementById("csv-table");
-    console.log(fileItem.file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = parseCsv(reader.result);
-      drawTable(table, data);
-    }
-    await reader.readAsText(fileItem.file);
-    table.innerHTML = "";
-    const thead = document.createElement("thead");
-    const tbody = document.createElement("tbody");
-    table.appendChild(thead);
-    table.appendChild(tbody);
-    thead.insertRow();
-
-
-    console.log(`File added: ${fileItem.file.name}`);
-  };
-
-  const parseCsv = (origin) => {
-    const data = [];
-    const rows = origin.split("\n");
-    for (let row of rows) {
-      if (row !== "") {
-        data.push(row.split(","));
-      }
-    }
-    return data;
-  };
-
-  const drawTable = (table, data, header = true) => {
-    table.innerHTML = "";
-
-    if (header) {
-      const thead = document.createElement("thead");
-      thead.insertRow();
-      table.append(thead);
-      const header = data[0];
-      for (let h of header) {
-        const th = document.createElement("th");
-        th.innerText = h;
-        thead.rows[0].append(th);
-      }
-
-      data = data.splice(1);
-    }
-
-    const tbody = document.createElement("tbody");
-    table.append(tbody);
-
-    for (let row of data) {
-      const tr = document.createElement("tr");
-      for (let col of row) {
-        const td = document.createElement("td");
-        td.innerText = col;
-        tr.append(td);
-      }
-      tbody.append(tr);
-    }
-  };
-
-  const handleRemoveFile = (err, fileItem) => {
-    const table = document.getElementById("csv-table");
-    console.log(`File ${fileItem.file.name} unloaded`);
-    table.innerHTML = "";
-  };
-
-  const handleSelectNetwork = (e) => {
-    console.log(e.target.value);
-    network = gqlNodeMap[e.target.value];
-    console.log(network);
-  };
-
   const sign = async () => {
-    console.log(privateKey);
-    const account = createAccount(privateKey);
-    console.log(account);
-    const address = await deriveAddress(account);
-    console.log(`address: ${address}`);
-    const query = `{transaction {nextTxNonce(address: "${address}")}}`;
-    const resp = await fetch(
-      `http://${network}/graphql`,
-      {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({query: query})
+    if (!(csvData && selectedNetwork && account)) {
+      alert("Please check uploaded CSV and selected network");
+      return;
+    }
+    const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, gqlNodeMap[selectedNetwork]);
+    if (!unsignedTx) {
+      return;
+    }
+    signed = true;
+    signedTx = await signTransaction(unsignedTx, account);
+    return unsignedTx;
+  };
+
+  const download = () => {
+    const txBlob = new Blob([signedTx], {type: "text/plain"});
+    const downloadUrl = window.URL.createObjectURL(txBlob);
+    const downloadLink = document.createElement("a");
+    downloadLink.download =
+      `signedTx_${csvName}_create_${DateTime.utc().toISO()}_until_${validUntil.toFormat("yyyy-MM-dd")}`;
+    downloadLink.href = downloadUrl;
+    downloadLink.click();
+  };
+
+  const deploy = async (e) => {
+    const result = confirm(`Deploy this csv data to ${selectedNetwork}?`);
+    if (!result) {
+      return;
+    }
+    try {
+      deployInProgress = true;
+      const txId = await stageTransaction(signedTx, gqlNodeMap[selectedNetwork]);
+      if (!txId) {
+        return;
       }
-    );
-    if (resp.status === 200) {
-      console.log(await resp.json());
-    } else {
-      console.log(`Fetch failed: ${resp.status}`);
-      console.log(await resp.text());
+      const txResult = await waitForMining(txId, gqlNodeMap[selectedNetwork]);
+      if (txResult.errors) {
+        alert(`Mining monitor failed: ${txResult.errors}`);
+        return;
+      }
+      if (txResult.txStatus === "SUCCESS") {
+        alert(`Tx added to block: ${txResult.blockIndex}`);
+        reset();
+      } else {
+        alert(`Tx add failed: ${txResult.txStatus}`);
+      }
+    } finally {
+      deployInProgress = false;
     }
   };
 </script>
 
-<h1>
-    Make new transaction to patch table csv
-</h1>
+<Heading tag="h2" class="mb-4">Make new transaction to patch table csv</Heading>
 
-<div class="flex">
-    <div class="csv-part flex-1 w-1/2">
+<div class="grid grid-cols-2 gap-4">
+    <div class="csv-part">
         <FilePond bind:this={pond} {name}
                   allowmultiple=false instantupload=false
-                  oninit={handleInit} onaddfile={handleAddFile}
-                  onremovefile={handleRemoveFile}
+                  oninit={handleInit}
+                  onaddfile={async(err, fileItem) => {
+                    const csv = await handleAddFile(err, fileItem);
+                    csvName = csv.name;
+                    csvData = csv.data;
+                  }}
+                  onremovefile={(err, fileItem) => {reset(); handleRemoveFile(err, fileItem);}}
         />
+        <Table id="csv-table" striped={true}>
+            <TableHead theadClass="text-xs">
+                {#each thead as h}
+                    <TableHeadCell>{h}</TableHeadCell>
+                {/each}
+            </TableHead>
+            <TableBody class="divide-y">
+                {#each tbody as body}
+                    <TableBodyRow>
+                        {#each body as b}
+                            <TableBodyCell>{b}</TableBodyCell>
+                        {/each}
+                    </TableBodyRow>
+
+                {/each}
+            </TableBody>
+        </Table>
         <table id="csv-table"></table>
     </div>
-    <div class="sign-part flex-1 w-1/2">
-        <div>
-            <label for="network" class="block text-sm font-medium text-gray-700">Country</label>
-            <select on:change={handleSelectNetwork} id="network" name="network" autocomplete="country-name"
-                    class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
-                <option value="local">Local Node</option>
-                <option value="previewnet">Previewnet</option>
-                <option value="mainnet">Mainnet</option>
-            </select>
+    <div class="sign-part">
+        <div class="mb-6">
+            <Label for="network">Select Network
+                <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}/>
+            </Label>
+            {#if enableLocal}
+                <Input label="Local Network" id="local-network" bind:value={localnet}
+                       placeholder="Input local network address without http://"/>
+            {/if}
         </div>
-        <div>
-            <label for="private-key">PrivateKey</label>
-            <input id="private-key" class="block w-full rounded-md broder-gray-300 "
-                   {type} {privateKey} on:input={handlePrivateKeyInput}>
+        <div class="mb-6">
+            <Label for="private-key">PrivateKey</Label>
+            <Input id="private-key" type="password" bind:value={privateKey}>
+                <button slot="right" on:mousedown={() => {document.getElementById('private-key').type="text"}}
+                        on:mouseup={() => {document.getElementById("private-key").type = "password"}}>
+                    <EyeRegular/>
+                </button>
+            </Input>
+            {#if !validPrivateKey}
+                <Alert color="red">
+                    <CircleExclamationSolid size="18" class="inline"></CircleExclamationSolid>
+                    <span class="font-medium">Invalid PrivateKey!</span> Please check private key again!
+                </Alert>
+            {/if}
         </div>
-        <button on:click={() => showPrivateKey = !showPrivateKey}>{showPrivateKey ? "Hide" : "Show"}</button>
-        <button on:click={sign}>sign</button>
+        <!--        <div class="mb-6">-->
+        <!--            <Datepicker datepickerFormat="yyyy-mm-dd" bind:value={validUntil}></Datepicker>-->
+        <!--        </div>-->
+        <div class="mb-6">
+            <Button on:click={sign}>Sign</Button>
+            {#if signed}
+                <Button color="purple" on:click={() => {showSigned = !showSigned;}}>
+                    Show Signed Tx data
+                </Button>
+            {/if}
+            {#if showSigned}
+                <Textarea class="h-96" readonly id="signed-tx" bind:value={signedTx}/>
+            {/if}
+        </div>
+        {#if signed}
+            <div class="mb-6">
+                The transaction will valid until {validUntil.plus({days: 1}).toFormat("yyyy-MM-dd HH:mm:ssZZ")}
+            </div>
+            <div class="mb-6 grid grid-flow-col gap-4">
+                <Button color="green" on:click={download}>Download Signed Tx</Button>
+                <Button color="red" disabled={deployInProgress} on:click={deploy}>
+                    {#if !deployInProgress}
+                        Deploy
+                    {:else}
+                        <Spinner class="mr-3" size="4"/>
+                        Deploying...
+                    {/if}
+                </Button>
+            </div>
+        {/if}
     </div>
 </div>
