@@ -209,6 +209,7 @@
         <!--            <Datepicker datepickerFormat="yyyy-mm-dd" bind:value={validUntil}></Datepicker>-->
         <!--        </div>-->
         <div class="mb-6">
+            <Alert color="yellow">If sign failed with valid data, please try again after clearing browser cache.</Alert>
             <Button on:click={sign}>Sign</Button>
             {#if signed}
                 <Button color="purple" on:click={() => {showSigned = !showSigned;}}>
