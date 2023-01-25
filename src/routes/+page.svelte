@@ -36,17 +36,20 @@
   $: type = showPrivateKey ? "text" : "password";
 
   let localnet = "";
+  const internal = "http://9c-internal-rpc-1.nine-chronicles.com";
   const previewnet = "";
   let mainnet = "";
   let selectedNetwork;
   $: enableLocal = selectedNetwork === "local";
   const gqlNodeList = [
     {value: "local", name: "Local Network"},
+    {value: "internal", name: "Internal Network"},
     {value: "previewnet", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
   $: gqlNodeMap = {
     local: localnet,
+    internal: internal,
     previewnet: previewnet,
     mainnet: mainnet
   };
@@ -184,7 +187,7 @@
             </Label>
             {#if enableLocal}
                 <Input label="Local Network" id="local-network" bind:value={localnet}
-                       placeholder="Input local network address without http://"/>
+                       placeholder="Input local network address including `http(s)://`"/>
             {/if}
         </div>
         <div class="mb-6">

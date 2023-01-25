@@ -4,7 +4,7 @@ import {sleep} from "./util.js";
 const executeQuery = async (network, query) => {
   try {
     return await fetch(
-      `http://${network}/graphql`,
+      `${network}/graphql`,
       {
         method: "POST",
         headers: {"Content-Type": "application/json"},
