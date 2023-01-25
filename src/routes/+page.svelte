@@ -132,7 +132,7 @@
       }
       const txResult = await waitForMining(txId, gqlNodeMap[selectedNetwork]);
       if (txResult.errors) {
-        alert(`Mining monitor failed: ${txResult.errors}`);
+        alert(`Mining monitor failed: ${txResult.errors[0].message}`);
         return;
       }
       if (txResult.txStatus === "SUCCESS") {

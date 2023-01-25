@@ -45,7 +45,7 @@ export const createActionTx = async (account, csvName, csvData, validUntil, netw
     const json = await resp.json();
     if (json.errors) {
       console.log(json.errors);
-      alert(`Error Occurred: ${json.errors}`);
+      alert(`Error Occurred: ${json.errors[0].message}`);
       return null;
     }
     return json.data.actionTxQuery.patchTableSheet;
