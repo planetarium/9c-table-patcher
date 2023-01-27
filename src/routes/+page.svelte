@@ -39,6 +39,7 @@
   const internal = "http://9c-internal-rpc-1.nine-chronicles.com";
   const previewnet = "";
   let mainnet = "";
+  let prevNetwork;
   let selectedNetwork;
   $: enableLocal = selectedNetwork === "local";
   const gqlNodeList = [
@@ -145,6 +146,27 @@
       deployInProgress = false;
     }
   };
+
+  const changeNetwork = () => {
+    if (signed) {
+      if (confirm("Changing network needs re-sign to create and deploy Tx. Proceed?")) {
+        clearSign();
+        prevNetwork = selectedNetwork;
+      } else {
+        selectedNetwork = prevNetwork;
+      }
+    } else {
+      prevNetwork = selectedNetwork;
+    }
+  };
+
+  const clearSign = () => {
+    privateKey = null;
+    signed = false;
+    signedTx = "";
+    showSigned = false;
+    deployInProgress = false;
+  };
 </script>
 
 <Heading tag="h2" class="mb-4">Make new transaction to patch table csv</Heading>
@@ -183,7 +205,8 @@
     <div class="sign-part">
         <div class="mb-6">
             <Label for="network">Select Network
-                <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}/>
+                <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
+                        on:change={changeNetwork}/>
             </Label>
             {#if enableLocal}
                 <Input label="Local Network" id="local-network" bind:value={localnet}
@@ -215,6 +238,7 @@
                 <Button color="purple" on:click={() => {showSigned = !showSigned;}}>
                     Show Signed Tx data
                 </Button>
+                <Button color="red" on:click={clearSign}>Clear signed data</Button>
             {/if}
             {#if showSigned}
                 <Textarea class="h-96" readonly id="signed-tx" bind:value={signedTx}/>
