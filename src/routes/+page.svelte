@@ -139,7 +139,7 @@
         alert(`Tx added to block: ${txResult.blockIndex}`);
         reset();
       } else {
-        alert(`Tx add failed: ${txResult.txStatus}`);
+        alert(`Tx add failed: ${txResult.txStatus}::${txResult.exceptionName}}`);
       }
     } finally {
       deployInProgress = false;
