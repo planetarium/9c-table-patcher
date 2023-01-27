@@ -37,7 +37,7 @@ export const createActionTx = async (account, csvName, csvData, validUntil, netw
     timestamp: "${validUntil.plus({days:1}).toFormat("yyyy-MM-dd'T'HH:mm:ssZZ")}"
     ){patchTableSheet(
     tableName: "${csvName}",
-    tableCsv: "${csvData.replaceAll('\n', '\\n')}"
+    tableCsv: "${csvData.trim().replaceAll("\r", "").replaceAll('\n', '\\n')}"
     )}}`;
   console.log(query);
   const resp = await executeQuery(network, query);

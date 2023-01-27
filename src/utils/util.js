@@ -7,7 +7,8 @@ export const parseCsv = (origin) => {
   if (!origin) {
     return data;
   }
-  const rows = origin.split("\n");
+  const sanitized = origin.trim().replaceAll("\r", "");
+  const rows = sanitized.split("\n");
   for (let row of rows) {
     if (row !== "") {
       data.push(row.split(","));
