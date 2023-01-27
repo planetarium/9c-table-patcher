@@ -1,5 +1,6 @@
 <svelte:head>
     <title>Nine Chronicles Table CSV Patcher</title>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 </svelte:head>
 
 <script>
