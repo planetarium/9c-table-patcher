@@ -6,8 +6,6 @@
 <script>
   import FilePond from "svelte-filepond";
   import {createAccount} from '@planetarium/account-raw';
-  import {onMount} from "svelte";
-  import {connectRpc} from "../utils/network.js";
   import {signTransaction} from "@planetarium/sign";
   import {DateTime} from "luxon";
   import {parseCsv} from "../utils/util.js";
@@ -37,9 +35,10 @@
   $: type = showPrivateKey ? "text" : "password";
 
   let localnet = "";
-  const internal = "http://9c-internal-rpc-1.nine-chronicles.com";
-  const previewnet = "";
-  let mainnet = "";
+  // const internal = "http://9c-internal-rpc-1.nine-chronicles.com";
+  const internal = "https://d1q7bftovae5zr.cloudfront.net";
+  const previewnet = "https://d1j87dd84yjyat.cloudfront.net";
+  let mainnet = "https://d233civhnximna.cloudfront.net";
   let prevNetwork;
   let selectedNetwork;
   $: enableLocal = selectedNetwork === "local";
@@ -93,9 +92,9 @@
     pond.removeFiles();
   }
 
-  onMount(async () => {
-    mainnet = await connectRpc();
-  });
+  // onMount(async () => {
+  //   mainnet = await connectRpc();
+  // });
 
   const sign = async () => {
     if (!(csvData && selectedNetwork && account)) {
