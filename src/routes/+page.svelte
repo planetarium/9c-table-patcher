@@ -6,6 +6,7 @@
 <script>
   import FilePond from "svelte-filepond";
   import {createAccount} from '@planetarium/account-raw';
+  import {decipherV3} from "@planetarium/account-web";
   import {signTransaction} from "@planetarium/sign";
   import {DateTime} from "luxon";
   import {parseCsv} from "../utils/util.js";
@@ -29,8 +30,10 @@
   import {createActionTx, stageTransaction, waitForMining} from "../utils/gql.js";
   import {CircleExclamationSolid, EyeRegular} from "svelte-awesome-icons";
 
-  let pond;
-  let name = "filepond";
+  let pondCsv;
+  let pondCsvName = "filepond_csv";
+  let pondKeystore;
+  let pondKeystoreName = "filepond_keystore";
   let showPrivateKey = false;
   $: type = showPrivateKey ? "text" : "password";
 
@@ -41,7 +44,8 @@
   let mainnet = "https://d233civhnximna.cloudfront.net";
   let prevNetwork;
   let selectedNetwork;
-  $: enableLocal = selectedNetwork === "local";
+  let prevKeyType;
+  let selectedKeyType;
   const gqlNodeList = [
     {value: "local", name: "Local Network"},
     {value: "internal", name: "Internal Network"},
@@ -54,6 +58,10 @@
     previewnet: previewnet,
     mainnet: mainnet
   };
+  const keyTypeList = [
+    {value: "keystore", name: "Use Keystore file"},
+    {value: "private_key", name: "Provide private key directly"}
+  ]
 
   let privateKey = "";
   let account;
@@ -63,13 +71,15 @@
       account = createAccount(privateKey);
       validPrivateKey = true;
     } catch (e) {
+      console.log(e);
       validPrivateKey = false;
     }
   }
-  $: account = privateKey ? createAccount(privateKey) : null;
 
   let csvName = null;
   let csvData = null;
+  let keystore = null;
+  let passphrase = null;
   $: thead = parseCsv(csvData)[0] ?? [];
   $: tbody = parseCsv(csvData).slice(1) ?? [];
 
@@ -89,7 +99,7 @@
     showSigned = false;
     signedTx = "";
     txId = null;
-    pond.removeFiles();
+    pondCsv.removeFiles();
   }
 
   // onMount(async () => {
@@ -160,6 +170,26 @@
     }
   };
 
+  const changeKeyType = () => {
+    if (signed) {
+      if (confirm("Changing key type needs re-sign to create and deploy Tx. Proceed?")) {
+        clearSign();
+        prevKeyType = selectedKeyType;
+      } else {
+        selectedKeyType = prevKeyType;
+      }
+    } else {
+      prevKeyType = selectedKeyType;
+    }
+  }
+
+  const unlockKeystore = () => {
+    console.log(pondKeystore);
+    console.log(keystore);
+    privateKey = decipherV3(keystore.data, passphrase).getPrivateKey();
+    console.log(privateKey);
+  }
+
   const clearSign = () => {
     privateKey = null;
     signed = false;
@@ -173,7 +203,7 @@
 
 <div class="grid grid-cols-2 gap-4">
     <div class="csv-part">
-        <FilePond bind:this={pond} {name}
+        <FilePond bind:this={pondCsv} name={pondCsvName}
                   allowmultiple=false instantupload=false
                   oninit={handleInit}
                   onaddfile={async(err, fileItem) => {
@@ -208,24 +238,53 @@
                 <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
                         on:change={changeNetwork}/>
             </Label>
-            {#if enableLocal}
+            {#if selectedNetwork === "local"}
                 <Input label="Local Network" id="local-network" bind:value={localnet}
                        placeholder="Input local network address including `http(s)://`"/>
             {/if}
         </div>
         <div class="mb-6">
-            <Label for="private-key">PrivateKey</Label>
-            <Input id="private-key" type="password" bind:value={privateKey}>
-                <button slot="right" on:mousedown={() => {document.getElementById('private-key').type="text"}}
-                        on:mouseup={() => {document.getElementById("private-key").type = "password"}}>
-                    <EyeRegular/>
-                </button>
-            </Input>
-            {#if !validPrivateKey}
-                <Alert color="red">
-                    <CircleExclamationSolid size="18" class="inline"></CircleExclamationSolid>
-                    <span class="font-medium">Invalid PrivateKey!</span> Please check private key again!
-                </Alert>
+            <Label for="key-type">Select Key Type
+                <Select id="key-type" class="mt-2" items={keyTypeList} on:change={changeKeyType}
+                        bind:value={selectedKeyType}/>
+            </Label>
+            {#if selectedKeyType === "keystore"}
+                <FilePond bind:this={pondKeystore} name={pondKeystoreName}
+                          allowmultiple=false instantupload=false
+                          oninit={handleInit}
+                          onaddfile={async(err, fileItem) => {
+                    keystore = await handleAddFile(err, fileItem);
+                    console.log(keystore);
+                  }}
+                          onremovefile={(err, fileItem) => {reset(); handleRemoveFile(err, fileItem);}}
+                />
+                <Label for="passphrase">Passphrase
+                    <Input id="passphrase" type="password" bind:value={passphrase}>
+                        <button slot="right" on:mousedown={() => {document.getElementById("passphrase").type="text"}}
+                                on:mouseup={() => {document.getElementById("passphrase").type="password"}}>
+                            <EyeRegular/>
+                        </button>
+                    </Input>
+                </Label>
+                {#if validPrivateKey}
+                    <Button color="green" disabled>Unlocked!</Button>
+                {:else }
+                    <Button on:click={unlockKeystore}>Unlock</Button>
+                {/if}
+            {:else if selectedKeyType === "private_key"}
+                <Label for="private-key">PrivateKey</Label>
+                <Input id="private-key" type="password" bind:value={privateKey}>
+                    <button slot="right" on:mousedown={() => {document.getElementById('private-key').type="text"}}
+                            on:mouseup={() => {document.getElementById("private-key").type = "password"}}>
+                        <EyeRegular/>
+                    </button>
+                </Input>
+                {#if !validPrivateKey}
+                    <Alert color="red">
+                        <CircleExclamationSolid size="18" class="inline"></CircleExclamationSolid>
+                        <span class="font-medium">Invalid PrivateKey!</span> Please check private key again!
+                    </Alert>
+                {/if}
             {/if}
         </div>
         <!--        <div class="mb-6">-->

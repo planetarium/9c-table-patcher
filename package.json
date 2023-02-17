@@ -30,6 +30,7 @@
   "type": "module",
   "dependencies": {
     "@planetarium/account-raw": "^0.0.3",
+    "@planetarium/account-web": "file:/home/ulismoon/Documents/planetarium/sphere/packages/account-web",
     "@planetarium/sign": "^0.0.11",
     "filepond": "^4.30.4",
     "luxon": "^3.2.1",
