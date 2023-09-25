@@ -38,7 +38,7 @@
   // const internal = "http://9c-internal-rpc-1.nine-chronicles.com";
   const internal = "https://d1q7bftovae5zr.cloudfront.net";
   const previewnet = "https://d1j87dd84yjyat.cloudfront.net";
-  let mainnet = "https://d233civhnximna.cloudfront.net";
+  let mainnet = "https://9c-main-full-state.nine-chronicles.com";
   let prevNetwork;
   let selectedNetwork;
   $: enableLocal = selectedNetwork === "local";
