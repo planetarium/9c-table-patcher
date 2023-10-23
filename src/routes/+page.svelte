@@ -1,6 +1,6 @@
 <svelte:head>
-    <title>Nine Chronicles Table CSV Patcher</title>
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  <title>Nine Chronicles Table CSV Patcher</title>
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 </svelte:head>
 
 <script>
@@ -28,32 +28,30 @@
   import {handleAddFile, handleInit, handleRemoveFile} from "../utils/filepond.js";
   import {createActionTx, stageTransaction, waitForMining} from "../utils/gql.js";
   import {CircleExclamationSolid, EyeRegular} from "svelte-awesome-icons";
+  import {onMount} from "svelte";
 
   let pond;
   let name = "filepond";
-  let showPrivateKey = false;
-  $: type = showPrivateKey ? "text" : "password";
+
+  const planetsUrl = {
+    mainnet: "https://planets.nine-chronicles.com/planets",
+    internal: "https://planets-internal.nine-chronicles.com/planets"
+  };
+  let planets = [];
+  let prevPlanet;
+  let selectedPlanet;
 
   let localnet = "";
-  // const internal = "http://9c-internal-rpc-1.nine-chronicles.com";
-  const internal = "https://d1q7bftovae5zr.cloudfront.net";
-  const previewnet = "https://d1j87dd84yjyat.cloudfront.net";
-  let mainnet = "https://9c-main-full-state.nine-chronicles.com";
+  const previewnetUrl = "https://d1j87dd84yjyat.cloudfront.net/graphql";
   let prevNetwork;
   let selectedNetwork;
-  $: enableLocal = selectedNetwork === "local";
   const gqlNodeList = [
     {value: "local", name: "Local Network"},
     {value: "internal", name: "Internal Network"},
     {value: "previewnet", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
-  $: gqlNodeMap = {
-    local: localnet,
-    internal: internal,
-    previewnet: previewnet,
-    mainnet: mainnet
-  };
+  let targetUrl = "";
 
   let privateKey = "";
   let account;
@@ -92,16 +90,15 @@
     pond.removeFiles();
   }
 
-  // onMount(async () => {
-  //   mainnet = await connectRpc();
-  // });
+  onMount(async () => {
+  });
 
   const sign = async () => {
     if (!(csvData && selectedNetwork && account)) {
       alert("Please check uploaded CSV and selected network");
       return;
     }
-    const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, gqlNodeMap[selectedNetwork]);
+    const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, targetUrl);
     if (!unsignedTx) {
       return;
     }
@@ -115,7 +112,7 @@
     const downloadUrl = window.URL.createObjectURL(txBlob);
     const downloadLink = document.createElement("a");
     downloadLink.download =
-      `signedTx_${csvName}_create_${DateTime.utc().toISO()}_until_${validUntil.toFormat("yyyy-MM-dd")}`;
+        `signedTx_${csvName}_create_${DateTime.utc().toISO()}_until_${validUntil.toFormat("yyyy-MM-dd")}`;
     downloadLink.href = downloadUrl;
     downloadLink.click();
   };
@@ -127,11 +124,11 @@
     }
     try {
       deployInProgress = true;
-      const txId = await stageTransaction(signedTx, gqlNodeMap[selectedNetwork]);
+      const txId = await stageTransaction(signedTx, targetUrl);
       if (!txId) {
         return;
       }
-      const txResult = await waitForMining(txId, gqlNodeMap[selectedNetwork]);
+      const txResult = await waitForMining(txId, targetUrl);
       if (txResult.errors) {
         alert(`Mining monitor failed: ${txResult.errors[0].message}`);
         return;
@@ -147,17 +144,58 @@
     }
   };
 
-  const changeNetwork = () => {
+  const changeNetwork = async () => {
     if (signed) {
       if (confirm("Changing network needs re-sign to create and deploy Tx. Proceed?")) {
         clearSign();
-        prevNetwork = selectedNetwork;
       } else {
         selectedNetwork = prevNetwork;
+        return;
       }
-    } else {
-      prevNetwork = selectedNetwork;
     }
+
+    prevNetwork = selectedNetwork;
+
+    if (selectedNetwork === "previewnet") {
+      targetUrl = previewnetUrl;
+    } else {
+      const planetResp = await fetch(planetsUrl[selectedNetwork]);
+      planets = await planetResp.json();
+    }
+  };
+
+  const changePlanet = (e) => {
+    if (signed) {
+      if (confirm("Changing planet needs re-sign to create and deploy Tx. Proceed?")) {
+        clearSign();
+      } else {
+        selectedPlanet = prevPlanet;
+        return;
+      }
+    }
+
+    targetUrl = "";
+    prevPlanet = selectedPlanet;
+    planets.every((planet) => {
+      if (planet.id === e.target.value) {
+        // Use full-state if available
+        planet.rpcEndpoints["headless.gql"].every((rpc) => {
+          if (rpc.includes("https") && rpc.includes("full-state")) {
+            targetUrl = rpc;
+            return false;
+          }
+          return true;
+        });
+
+        // Random select
+        if (targetUrl === "") {
+          const https = planet.rpcEndpoints["headless.gql"].filter(e => e.includes("https"));
+          targetUrl = https[Math.floor(Math.random() * https.length)];
+        }
+        return false;
+      }
+      return true;
+    });
   };
 
   const clearSign = () => {
@@ -172,93 +210,106 @@
 <Heading tag="h2" class="mb-4">Make new transaction to patch table csv</Heading>
 
 <div class="grid grid-cols-2 gap-4">
-    <div class="csv-part">
-        <FilePond bind:this={pond} {name}
-                  allowmultiple=false instantupload=false
-                  oninit={handleInit}
-                  onaddfile={async(err, fileItem) => {
+  <div class="csv-part">
+    <FilePond bind:this={pond} {name}
+              allowmultiple=false instantupload=false
+              oninit={handleInit}
+              onaddfile={async(err, fileItem) => {
                     const csv = await handleAddFile(err, fileItem);
                     csvName = csv.name;
                     csvData = csv.data;
                   }}
-                  onremovefile={(err, fileItem) => {reset(); handleRemoveFile(err, fileItem);}}
-        />
-        <Table id="csv-table" striped={true}>
-            <TableHead theadClass="text-xs">
-                {#each thead as h}
-                    <TableHeadCell>{h}</TableHeadCell>
-                {/each}
-            </TableHead>
-            <TableBody class="divide-y">
-                {#each tbody as body}
-                    <TableBodyRow>
-                        {#each body as b}
-                            <TableBodyCell>{b}</TableBodyCell>
-                        {/each}
-                    </TableBodyRow>
+              onremovefile={(err, fileItem) => {reset(); handleRemoveFile(err, fileItem);}}
+    />
+    <Table id="csv-table" striped={true}>
+      <TableHead theadClass="text-xs">
+        {#each thead as h}
+          <TableHeadCell>{h}</TableHeadCell>
+        {/each}
+      </TableHead>
+      <TableBody class="divide-y">
+        {#each tbody as body}
+          <TableBodyRow>
+            {#each body as b}
+              <TableBodyCell>{b}</TableBodyCell>
+            {/each}
+          </TableBodyRow>
 
-                {/each}
-            </TableBody>
-        </Table>
-        <table id="csv-table"></table>
+        {/each}
+      </TableBody>
+    </Table>
+    <table id="csv-table"></table>
+  </div>
+  <div class="sign-part">
+    <div class="mb-6">
+      <Label for="network">Select Network
+        <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
+                on:change={changeNetwork}/>
+      </Label>
+      {#if selectedNetwork === "local"}
+        <Input label="Local Network" id="local-network" bind:value={localnet}
+               placeholder="Input local network address including `http(s)://`"/>
+      {:else if selectedNetwork === "mainnet" || selectedNetwork === "internal"}
+        <Label for="planet">Select Planet</Label>
+        <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
+          {#each planets as planet}
+            <option value={planet.id}>{planet.name}</option>
+          {/each}
+        </Select>
+      {/if}
     </div>
-    <div class="sign-part">
-        <div class="mb-6">
-            <Label for="network">Select Network
-                <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
-                        on:change={changeNetwork}/>
-            </Label>
-            {#if enableLocal}
-                <Input label="Local Network" id="local-network" bind:value={localnet}
-                       placeholder="Input local network address including `http(s)://`"/>
-            {/if}
-        </div>
-        <div class="mb-6">
-            <Label for="private-key">PrivateKey</Label>
-            <Input id="private-key" type="password" bind:value={privateKey}>
-                <button slot="right" on:mousedown={() => {document.getElementById('private-key').type="text"}}
-                        on:mouseup={() => {document.getElementById("private-key").type = "password"}}>
-                    <EyeRegular/>
-                </button>
-            </Input>
-            {#if !validPrivateKey}
-                <Alert color="red">
-                    <CircleExclamationSolid size="18" class="inline"></CircleExclamationSolid>
-                    <span class="font-medium">Invalid PrivateKey!</span> Please check private key again!
-                </Alert>
-            {/if}
-        </div>
-        <!--        <div class="mb-6">-->
-        <!--            <Datepicker datepickerFormat="yyyy-mm-dd" bind:value={validUntil}></Datepicker>-->
-        <!--        </div>-->
-        <div class="mb-6">
-            <Alert color="yellow">If sign failed with valid data, please try again after clearing browser cache.</Alert>
-            <Button on:click={sign}>Sign</Button>
-            {#if signed}
-                <Button color="purple" on:click={() => {showSigned = !showSigned;}}>
-                    Show Signed Tx data
-                </Button>
-                <Button color="red" on:click={clearSign}>Clear signed data</Button>
-            {/if}
-            {#if showSigned}
-                <Textarea class="h-96" readonly id="signed-tx" bind:value={signedTx}/>
-            {/if}
-        </div>
-        {#if signed}
-            <div class="mb-6">
-                The transaction will valid until {validUntil.plus({days: 1}).toFormat("yyyy-MM-dd HH:mm:ssZZ")}
-            </div>
-            <div class="mb-6 grid grid-flow-col gap-4">
-                <Button color="green" on:click={download}>Download Signed Tx</Button>
-                <Button color="red" disabled={deployInProgress} on:click={deploy}>
-                    {#if !deployInProgress}
-                        Deploy
-                    {:else}
-                        <Spinner class="mr-3" size="4"/>
-                        Deploying...
-                    {/if}
-                </Button>
-            </div>
+    <div class="mb-6">
+      <Label for="private-key">PrivateKey</Label>
+      <Input id="private-key" type="password" bind:value={privateKey}>
+        <button slot="right" on:mousedown={() => {document.getElementById('private-key').type="text"}}
+                on:mouseup={() => {document.getElementById("private-key").type = "password"}}>
+          <EyeRegular/>
+        </button>
+      </Input>
+      {#if !validPrivateKey}
+        <Alert color="red">
+          <CircleExclamationSolid size="18" class="inline"></CircleExclamationSolid>
+          <span class="font-medium">Invalid PrivateKey!</span> Please check private key again!
+        </Alert>
+      {/if}
+    </div>
+    <!--        <div class="mb-6">-->
+    <!--            <Datepicker datepickerFormat="yyyy-mm-dd" bind:value={validUntil}></Datepicker>-->
+    <!--        </div>-->
+    <div class="mb-6">
+      <Alert color="yellow">If sign failed with valid data, please try again after clearing browser cache.</Alert>
+      <Button on:click={sign}>Sign</Button>
+      {#if signed}
+        {#if showSigned}
+          <Button color="purple" on:click={() => {showSigned = false;}}>
+            Hide Signed Tx data
+          </Button>
+        {:else}
+          <Button color="purple" on:click={() => {showSigned = true;}}>
+            Show Signed Tx data
+          </Button>
         {/if}
+        <Button color="red" on:click={clearSign}>Clear signed data</Button>
+      {/if}
+      {#if showSigned}
+        <Textarea class="h-96" readonly id="signed-tx" bind:value={signedTx}/>
+      {/if}
     </div>
+    {#if signed}
+      <div class="mb-6">
+        The transaction will valid until {validUntil.plus({days: 1}).toFormat("yyyy-MM-dd HH:mm:ssZZ")}
+      </div>
+      <div class="mb-6 grid grid-flow-col gap-4">
+        <Button color="green" on:click={download}>Download Signed Tx</Button>
+        <Button color="red" disabled={deployInProgress} on:click={deploy}>
+          {#if !deployInProgress}
+            Deploy
+          {:else}
+            <Spinner class="mr-3" size="4"/>
+            Deploying...
+          {/if}
+        </Button>
+      </div>
+    {/if}
+  </div>
 </div>
