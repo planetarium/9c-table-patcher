@@ -3,16 +3,36 @@
 .npm
 *.tsbuildinfo
 # Directories
-dist/           # This is the build process will output code.
-node_modules/   # The original reason we're here!
+# This is the build process will output code.
+dist/
+# Svelte build output code.
+/build
+# The original reason we're here!
+node_modules/
+/package
 # Env files      # A good safeguard against accidentally publishing
-.env.           #  private information, including security keys
+#  private information, including security keys
+.env.
 .env.test
+.env*
+!.env.example
 # Logs
 *.log
 logs
 npm-debug.log*
-# Misc files
-.DS_Store       # Macs often create this file
-notes.md        # Personal project notes, not my reference.
+
+# Jetbrains
 .idea/
+
+# Sveltekit
+/.svelte-kit/
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Misc files
+# Macs often create this file
+.DS_Store
+# Personal project notes, not my reference.
+notes.md
