@@ -77,7 +77,7 @@ export const waitForMining = async (txId, network) => {
     txStatus
     blockIndex
     blockHash
-    exceptionName
+    exceptionNames
     }}}`;
 
   let resp = await executeQuery(network, query);
