@@ -130,10 +130,11 @@
     }
     try {
       deployInProgress = true;
-      const txId = await stageTransaction(signedTx, targetUrl);
+      txId = await stageTransaction(signedTx, targetUrl);
       if (!txId) {
         return;
       }
+
       const txResult = await waitForMining(txId, targetUrl);
       if (txResult.errors) {
         alert(`Mining monitor failed: ${txResult.errors[0].message}`);
@@ -309,6 +310,9 @@
           {/if}
         </Button>
       </div>
+    {/if}
+    {#if txId}
+      <div>Tx ID: <span id="tx_id">{txId || ""}</span></div>
     {/if}
   </div>
 </div>
