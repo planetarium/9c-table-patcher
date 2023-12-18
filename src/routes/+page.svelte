@@ -33,9 +33,15 @@
   let pond;
   let name = "filepond";
 
-  const planetsUrl = {
+  const PLANET_URL = {
     mainnet: "https://planets.nine-chronicles.com/planets",
     internal: "https://planets-internal.nine-chronicles.com/planets"
+  };
+  const GQL_HOST = {
+    "0x000000000000": "https://odin-full-state.nine-chronicles.com/graphql",
+    "0x000000000001": "https://heimdall-full-state.nine-chronicles.com/graphql",
+    "0x100000000000": "https://odin-internal-rpc-1.nine-chronicles.com/graphql",
+    "0x100000000001": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql",
   };
   let planets = [];
   let prevPlanet;
@@ -124,10 +130,11 @@
     }
     try {
       deployInProgress = true;
-      const txId = await stageTransaction(signedTx, targetUrl);
+      txId = await stageTransaction(signedTx, targetUrl);
       if (!txId) {
         return;
       }
+
       const txResult = await waitForMining(txId, targetUrl);
       if (txResult.errors) {
         alert(`Mining monitor failed: ${txResult.errors[0].message}`);
@@ -159,7 +166,7 @@
     if (selectedNetwork === "previewnet") {
       targetUrl = previewnetUrl;
     } else {
-      const planetResp = await fetch(planetsUrl[selectedNetwork]);
+      const planetResp = await fetch(PLANET_URL[selectedNetwork]);
       planets = await planetResp.json();
     }
   };
@@ -178,20 +185,13 @@
     prevPlanet = selectedPlanet;
     planets.every((planet) => {
       if (planet.id === e.target.value) {
-        // Use full-state if available
-        planet.rpcEndpoints["headless.gql"].every((rpc) => {
-          if (rpc.includes("https") && rpc.includes("full-state")) {
-            targetUrl = rpc;
-            return false;
-          }
-          return true;
-        });
-
-        // Random select
-        if (targetUrl === "") {
-          const https = planet.rpcEndpoints["headless.gql"].filter(e => e.includes("https"));
-          targetUrl = https[Math.floor(Math.random() * https.length)];
+        targetUrl = GQL_HOST[planet.id];
+        if (targetUrl) {
+          return false;
         }
+
+        const https = planet.rpcEndpoints["headless.gql"].filter(e => e.includes("https"));
+        targetUrl = https[Math.floor(Math.random() * https.length)];
         return false;
       }
       return true;
@@ -310,6 +310,9 @@
           {/if}
         </Button>
       </div>
+    {/if}
+    {#if txId}
+      <div>Tx ID: <span id="tx_id">{txId || ""}</span></div>
     {/if}
   </div>
 </div>
