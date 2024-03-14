@@ -33,28 +33,36 @@
   let pond;
   let name = "filepond";
 
-  const PLANET_URL = {
-    mainnet: "https://planets.nine-chronicles.com/planets",
-    internal: "https://planets-internal.nine-chronicles.com/planets"
+  let planets = {
+    "internal": {
+      "0x100000000000": {
+        "name": "Odin (Internal)",
+        "url": "https://odin-internal-rpc-1.nine-chronicles.com/graphql"
+      },
+      "0x100000000001": {
+        "name": "Heimdall (Internal)",
+        "url": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql"
+      }
+    },
+    "mainnet": {
+      "0x000000000000": {
+        "name": "Odin",
+        "url": "https://odin-full-state.nine-chronicles.com/graphql"
+      },
+      "0x000000000001": {
+        "name": "Heimdall",
+        "url": "https://himdall-full-state.nine-chronicles.com/graphql"
+      }
+    }
   };
-  const GQL_HOST = {
-    "0x000000000000": "https://odin-full-state.nine-chronicles.com/graphql",
-    "0x000000000001": "https://heimdall-full-state.nine-chronicles.com/graphql",
-    "0x100000000000": "https://odin-internal-rpc-1.nine-chronicles.com/graphql",
-    "0x100000000001": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql",
-  };
-  let planets = [];
+  
   let prevPlanet;
   let selectedPlanet;
 
-  let localnet = "";
-  const previewnetUrl = "https://d1j87dd84yjyat.cloudfront.net/graphql";
   let prevNetwork;
   let selectedNetwork;
   const gqlNodeList = [
-    {value: "local", name: "Local Network"},
     {value: "internal", name: "Internal Network"},
-    {value: "previewnet", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
   let targetUrl = "";
@@ -162,13 +170,6 @@
     }
 
     prevNetwork = selectedNetwork;
-
-    if (selectedNetwork === "previewnet") {
-      targetUrl = previewnetUrl;
-    } else {
-      const planetResp = await fetch(PLANET_URL[selectedNetwork]);
-      planets = await planetResp.json();
-    }
   };
 
   const changePlanet = (e) => {
@@ -181,21 +182,8 @@
       }
     }
 
-    targetUrl = "";
     prevPlanet = selectedPlanet;
-    planets.every((planet) => {
-      if (planet.id === e.target.value) {
-        targetUrl = GQL_HOST[planet.id];
-        if (targetUrl) {
-          return false;
-        }
-
-        const https = planet.rpcEndpoints["headless.gql"].filter(e => e.includes("https"));
-        targetUrl = https[Math.floor(Math.random() * https.length)];
-        return false;
-      }
-      return true;
-    });
+    targetUrl = planets[selectedNetwork][selectedPlanet].url;
   };
 
   const clearSign = () => {
@@ -246,14 +234,11 @@
         <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
                 on:change={changeNetwork}/>
       </Label>
-      {#if selectedNetwork === "local"}
-        <Input label="Local Network" id="local-network" bind:value={localnet}
-               placeholder="Input local network address including `http(s)://`"/>
-      {:else if selectedNetwork === "mainnet" || selectedNetwork === "internal"}
+      {#if selectedNetwork === "mainnet" || selectedNetwork === "internal"}
         <Label for="planet">Select Planet</Label>
         <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
-          {#each planets as planet}
-            <option value={planet.id}>{planet.name}</option>
+          {#each Object.entries(planets[selectedNetwork]) as [id, info]}
+            <option value={id}>{info.name}</option>
           {/each}
         </Select>
       {/if}
