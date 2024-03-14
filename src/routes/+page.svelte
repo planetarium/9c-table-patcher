@@ -37,18 +37,23 @@
     mainnet: "https://planets.nine-chronicles.com/planets",
     internal: "https://planets-internal.nine-chronicles.com/planets"
   };
-  let planets = [];
+  let planets = {
+    "internal": {
+      "0x100000000000": "https://odin-internal-rpc-1.nine-chronicles.com/graphql",
+      "0x100000000001": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql",
+    },
+    "mainnet": {
+      "0x000000000000": "https://odin-full-state.nine-chronicles.com/graphql",
+      "0x000000000001": "https://heimall-full-state.nine-chronicles.com/graphql",
+    }
+  };
   let prevPlanet;
   let selectedPlanet;
 
-  let localnet = "";
-  const previewnetUrl = "https://d1j87dd84yjyat.cloudfront.net/graphql";
   let prevNetwork;
   let selectedNetwork;
   const gqlNodeList = [
-    {value: "local", name: "Local Network"},
     {value: "internal", name: "Internal Network"},
-    {value: "previewnet", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
   let targetUrl = "";
@@ -155,13 +160,6 @@
     }
 
     prevNetwork = selectedNetwork;
-
-    if (selectedNetwork === "previewnet") {
-      targetUrl = previewnetUrl;
-    } else {
-      const planetResp = await fetch(planetsUrl[selectedNetwork]);
-      planets = await planetResp.json();
-    }
   };
 
   const changePlanet = (e) => {
@@ -174,28 +172,8 @@
       }
     }
 
-    targetUrl = "";
     prevPlanet = selectedPlanet;
-    planets.every((planet) => {
-      if (planet.id === e.target.value) {
-        // Use full-state if available
-        planet.rpcEndpoints["headless.gql"].every((rpc) => {
-          if (rpc.includes("https") && rpc.includes("full-state")) {
-            targetUrl = rpc;
-            return false;
-          }
-          return true;
-        });
-
-        // Random select
-        if (targetUrl === "") {
-          const https = planet.rpcEndpoints["headless.gql"].filter(e => e.includes("https"));
-          targetUrl = https[Math.floor(Math.random() * https.length)];
-        }
-        return false;
-      }
-      return true;
-    });
+    targetUrl = planets[selectedNetwork][selectedPlanet];
   };
 
   const clearSign = () => {
