@@ -36,3 +36,6 @@ vite.config.ts.timestamp-*
 .DS_Store
 # Personal project notes, not my reference.
 notes.md
+
+# Visual Studio
+.vscode/
