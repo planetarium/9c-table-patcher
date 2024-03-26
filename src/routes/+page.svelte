@@ -51,7 +51,7 @@
       },
       "0x000000000001": {
         "name": "Heimdall",
-        "url": "https://himdall-full-state.nine-chronicles.com/graphql"
+        "url": "https://heimdall-full-state.nine-chronicles.com/graphql"
       }
     }
   };
