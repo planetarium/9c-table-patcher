@@ -132,10 +132,18 @@
   };
 
   const deploy = async (e) => {
-    const result = confirm(`Deploy this csv data to ${selectedNetwork}?`);
+    const result = confirm(`Deploy this csv data to ${selectedNetwork}?\n(${targetUrl})`);
     if (!result) {
       return;
     }
+
+    if (!targetUrl.includes("internal")) {
+      const result = confirm(`It seems you're deploying to mainnet. Are you sure?\n(${targetUrl})`);
+      if (!result) {
+        return;
+      }
+    }
+
     try {
       deployInProgress = true;
       txId = await stageTransaction(signedTx, targetUrl);
