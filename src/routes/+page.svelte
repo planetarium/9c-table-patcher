@@ -48,6 +48,16 @@
         "url": "https://idun-internal-rpc-1.nine-chronicles.com/graphql"
       },
     },
+    "preview": {
+      "0x100000000000": {
+        "name": "Odin (Preview)",
+        "url": "https://odin-preview-rpc-1.nine-chronicles.com/graphql"
+      },
+      "0x100000000001": {
+        "name": "Heimdall (Preview)",
+        "url": "https://heimdall-preview-rpc-1.nine-chronicles.com/graphql"
+      }
+    },
     "mainnet": {
       "0x000000000000": {
         "name": "Odin",
@@ -59,7 +69,7 @@
       }
     }
   };
-  
+
   let prevPlanet;
   let selectedPlanet;
 
@@ -67,6 +77,7 @@
   let selectedNetwork;
   const gqlNodeList = [
     {value: "internal", name: "Internal Network"},
+    {value: "preview", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
   let targetUrl = "";
@@ -96,6 +107,7 @@
 
   let signed = false;
   let showSigned = false;
+  let signInProgress = false;
   let deployInProgress = false;
 
   const reset = () => {
@@ -116,12 +128,14 @@
       alert("Please check uploaded CSV and selected network");
       return;
     }
+    signInProgress = true;
     const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, targetUrl);
     if (!unsignedTx) {
       return;
     }
     signed = true;
     signedTx = await signTransaction(unsignedTx, account);
+    signInProgress = false;
     return unsignedTx;
   };
 
@@ -141,7 +155,7 @@
       return;
     }
 
-    if (!targetUrl.includes("internal")) {
+    if (targetUrl.includes("full-state")) {
       const result = confirm(`It seems you're deploying to mainnet. Are you sure?\n(${targetUrl})`);
       if (!result) {
         return;
@@ -275,7 +289,14 @@
     <!--        </div>-->
     <div class="mb-6">
       <Alert color="yellow">If sign failed with valid data, please try again after clearing browser cache.</Alert>
-      <Button on:click={sign}>Sign</Button>
+      <Button on:click={sign} disabled={signInProgress}>
+        {#if signInProgress}
+          <Spinner class="mr-3" size="4"/>
+          Signing...
+        {:else}
+          Sign
+        {/if}
+      </Button>
       {#if signed}
         {#if showSigned}
           <Button color="purple" on:click={() => {showSigned = false;}}>
