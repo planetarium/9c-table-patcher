@@ -42,7 +42,11 @@
       "0x100000000001": {
         "name": "Heimdall (Internal)",
         "url": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql"
-      }
+      },
+      "0x100000000002": {
+        "name": "Idun (Internal)",
+        "url": "https://idun-internal-rpc-1.nine-chronicles.com/graphql"
+      },
     },
     "mainnet": {
       "0x000000000000": {
