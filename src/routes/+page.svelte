@@ -103,6 +103,7 @@
 
   let signed = false;
   let showSigned = false;
+  let signInProgress = false;
   let deployInProgress = false;
 
   const reset = () => {
@@ -123,12 +124,14 @@
       alert("Please check uploaded CSV and selected network");
       return;
     }
+    signInProgress = true;
     const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, targetUrl);
     if (!unsignedTx) {
       return;
     }
     signed = true;
     signedTx = await signTransaction(unsignedTx, account);
+    signInProgress = false;
     return unsignedTx;
   };
 
@@ -282,7 +285,14 @@
     <!--        </div>-->
     <div class="mb-6">
       <Alert color="yellow">If sign failed with valid data, please try again after clearing browser cache.</Alert>
-      <Button on:click={sign}>Sign</Button>
+      <Button on:click={sign} disabled={signInProgress}>
+        {#if signInProgress}
+          <Spinner class="mr-3" size="4"/>
+          Signing...
+        {:else}
+          Sign
+        {/if}
+      </Button>
       {#if signed}
         {#if showSigned}
           <Button color="purple" on:click={() => {showSigned = false;}}>
