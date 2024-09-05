@@ -2,21 +2,21 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" href="/9c-table-patcher/favicon.png" />
+		<link rel="icon" href="./favicon.png" />
 		<meta name="viewport" content="width=device-width" />
-		<meta http-equiv="content-security-policy" content="">
-		<link href="/9c-table-patcher/_app/immutable/assets/_layout-9068adf3.css" rel="stylesheet">
-		<link href="/9c-table-patcher/_app/immutable/assets/_page-1d121e74.css" rel="stylesheet">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/start-3dab8c12.js">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/chunks/index-f6d3d140.js">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/chunks/singletons-8e87cc15.js">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/components/pages/_layout.svelte-8d80a7e9.js">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/modules/pages/_layout.js-9cbb603b.js">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/chunks/_layout-da46b06b.js">
-		<link rel="modulepreload" href="/9c-table-patcher/_app/immutable/components/pages/_page.svelte-b9b2df24.js"><title>Nine Chronicles Table CSV Patcher</title><!-- HEAD_svelte-7gs7pw_START --><meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"><!-- HEAD_svelte-7gs7pw_END -->
+		
+		<link href="./_app/immutable/assets/0._w8-8ddQ.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/2.BsrAzQCc.css" rel="stylesheet">
+		<link rel="modulepreload" href="./_app/immutable/entry/start.BMLKyGgJ.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/entry.DtK9lfNg.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/index.CcjJGmHq.js">
+		<link rel="modulepreload" href="./_app/immutable/entry/app.Byh-4cZb.js">
+		<link rel="modulepreload" href="./_app/immutable/nodes/0.BKWF19_P.js">
+		<link rel="modulepreload" href="./_app/immutable/nodes/2.5hwQ0QCr.js"><title>Nine Chronicles Table CSV Patcher</title><!-- HEAD_svelte-7gs7pw_START --><meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"><!-- HEAD_svelte-7gs7pw_END -->
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">
+
 
 
 
@@ -66,21 +66,31 @@
     </div></div>
 
 
-		<script type="module" data-sveltekit-hydrate="1xsiwvg">
-			import { start } from "/9c-table-patcher/_app/immutable/start-3dab8c12.js";
+			
+			<script>
+				{
+					__sveltekit_16t5qfo = {
+						base: new URL(".", location).pathname.slice(0, -1),
+						assets: "/9c-table-patcher"
+					};
 
-			start({
-				env: {},
-				paths: {"base":"/9c-table-patcher","assets":"/9c-table-patcher"},
-				target: document.querySelector('[data-sveltekit-hydrate="1xsiwvg"]').parentNode,
-				version: "1724228121828",
-				hydrate: {
-					node_ids: [0, 2],
-					data: [null,null],
-					form: null
+					const element = document.currentScript.parentElement;
+
+					const data = [null,null];
+
+					Promise.all([
+						import("./_app/immutable/entry/start.BMLKyGgJ.js"),
+						import("./_app/immutable/entry/app.Byh-4cZb.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 2],
+							data,
+							form: null,
+							error: null
+						});
+					});
 				}
-			});
-		</script>
-	</div>
+			</script>
+		</div>
 	</body>
 </html>
