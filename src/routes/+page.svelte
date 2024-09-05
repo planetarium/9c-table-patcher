@@ -33,22 +33,36 @@
   let pond;
   let name = "filepond";
 
-  const planetsUrl = {
-    mainnet: "https://planets.nine-chronicles.com/planets",
-    internal: "https://planets-internal.nine-chronicles.com/planets"
+  let planets = {
+    "internal": {
+      "0x100000000000": {
+        "name": "Odin (Internal)",
+        "url": "https://odin-internal-rpc-1.nine-chronicles.com/graphql"
+      },
+      "0x100000000001": {
+        "name": "Heimdall (Internal)",
+        "url": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql"
+      }
+    },
+    "mainnet": {
+      "0x000000000000": {
+        "name": "Odin",
+        "url": "https://odin-full-state.nine-chronicles.com/graphql"
+      },
+      "0x000000000001": {
+        "name": "Heimdall",
+        "url": "https://heimdall-full-state.nine-chronicles.com/graphql"
+      }
+    }
   };
-  let planets = [];
+  
   let prevPlanet;
   let selectedPlanet;
 
-  let localnet = "";
-  const previewnetUrl = "https://d1j87dd84yjyat.cloudfront.net/graphql";
   let prevNetwork;
   let selectedNetwork;
   const gqlNodeList = [
-    {value: "local", name: "Local Network"},
     {value: "internal", name: "Internal Network"},
-    {value: "previewnet", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
   let targetUrl = "";
@@ -118,16 +132,25 @@
   };
 
   const deploy = async (e) => {
-    const result = confirm(`Deploy this csv data to ${selectedNetwork}?`);
+    const result = confirm(`Deploy this csv data to ${selectedNetwork}?\n(${targetUrl})`);
     if (!result) {
       return;
     }
+
+    if (!targetUrl.includes("internal")) {
+      const result = confirm(`It seems you're deploying to mainnet. Are you sure?\n(${targetUrl})`);
+      if (!result) {
+        return;
+      }
+    }
+
     try {
       deployInProgress = true;
-      const txId = await stageTransaction(signedTx, targetUrl);
+      txId = await stageTransaction(signedTx, targetUrl);
       if (!txId) {
         return;
       }
+
       const txResult = await waitForMining(txId, targetUrl);
       if (txResult.errors) {
         alert(`Mining monitor failed: ${txResult.errors[0].message}`);
@@ -155,13 +178,6 @@
     }
 
     prevNetwork = selectedNetwork;
-
-    if (selectedNetwork === "previewnet") {
-      targetUrl = previewnetUrl;
-    } else {
-      const planetResp = await fetch(planetsUrl[selectedNetwork]);
-      planets = await planetResp.json();
-    }
   };
 
   const changePlanet = (e) => {
@@ -174,28 +190,8 @@
       }
     }
 
-    targetUrl = "";
     prevPlanet = selectedPlanet;
-    planets.every((planet) => {
-      if (planet.id === e.target.value) {
-        // Use full-state if available
-        planet.rpcEndpoints["headless.gql"].every((rpc) => {
-          if (rpc.includes("https") && rpc.includes("full-state")) {
-            targetUrl = rpc;
-            return false;
-          }
-          return true;
-        });
-
-        // Random select
-        if (targetUrl === "") {
-          const https = planet.rpcEndpoints["headless.gql"].filter(e => e.includes("https"));
-          targetUrl = https[Math.floor(Math.random() * https.length)];
-        }
-        return false;
-      }
-      return true;
-    });
+    targetUrl = planets[selectedNetwork][selectedPlanet].url;
   };
 
   const clearSign = () => {
@@ -246,14 +242,11 @@
         <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
                 on:change={changeNetwork}/>
       </Label>
-      {#if selectedNetwork === "local"}
-        <Input label="Local Network" id="local-network" bind:value={localnet}
-               placeholder="Input local network address including `http(s)://`"/>
-      {:else if selectedNetwork === "mainnet" || selectedNetwork === "internal"}
+      {#if selectedNetwork === "mainnet" || selectedNetwork === "internal"}
         <Label for="planet">Select Planet</Label>
         <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
-          {#each planets as planet}
-            <option value={planet.id}>{planet.name}</option>
+          {#each Object.entries(planets[selectedNetwork]) as [id, info]}
+            <option value={id}>{info.name}</option>
           {/each}
         </Select>
       {/if}
@@ -310,6 +303,9 @@
           {/if}
         </Button>
       </div>
+    {/if}
+    {#if txId}
+      <div>Tx ID: <span id="tx_id">{txId || ""}</span></div>
     {/if}
   </div>
 </div>
