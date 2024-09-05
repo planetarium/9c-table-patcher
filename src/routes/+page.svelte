@@ -44,6 +44,16 @@
         "url": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql"
       }
     },
+    "preview": {
+      "0x100000000000": {
+        "name": "Odin (Preview)",
+        "url": "https://odin-preview-rpc-1.nine-chronicles.com/graphql"
+      },
+      "0x100000000001": {
+        "name": "Heimdall (Preview)",
+        "url": "https://heimdall-preview-rpc-1.nine-chronicles.com/graphql"
+      }
+    },
     "mainnet": {
       "0x000000000000": {
         "name": "Odin",
@@ -55,7 +65,7 @@
       }
     }
   };
-  
+
   let prevPlanet;
   let selectedPlanet;
 
@@ -63,6 +73,7 @@
   let selectedNetwork;
   const gqlNodeList = [
     {value: "internal", name: "Internal Network"},
+    {value: "preview", name: "Preview Network"},
     {value: "mainnet", name: "Mainnet"}
   ];
   let targetUrl = "";
@@ -137,7 +148,7 @@
       return;
     }
 
-    if (!targetUrl.includes("internal")) {
+    if (targetUrl.includes("full-state")) {
       const result = confirm(`It seems you're deploying to mainnet. Are you sure?\n(${targetUrl})`);
       if (!result) {
         return;
