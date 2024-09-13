@@ -260,7 +260,7 @@
         <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
                 on:change={changeNetwork}/>
       </Label>
-      {#if selectedNetwork === "mainnet" || selectedNetwork === "internal"}
+      {#if ["mainnet", "preview", "internal"].includes(selectedNetwork)}
         <Label for="planet">Select Planet</Label>
         <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
           {#each Object.entries(planets[selectedNetwork]) as [id, info]}
