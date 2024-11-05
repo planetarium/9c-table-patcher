@@ -41,11 +41,15 @@
       },
       "0x100000000001": {
         "name": "Heimdall (Internal)",
-        "url": "https://heimdall-internal-rpc-1.nine-chronicles.com/graphql"
+        "url": "https://heimdall-internal-rpc.nine-chronicles.com/graphql"
       },
       "0x100000000002": {
         "name": "Idun (Internal)",
         "url": "https://idun-internal-rpc-1.nine-chronicles.com/graphql"
+      },
+      "0x100000000003": {
+        "name": "Thor (Internal)",
+        "url": "https://thor-internal-rpc-1.nine-chronicles.com/graphql"
       },
     },
     "preview": {
@@ -66,7 +70,11 @@
       "0x000000000001": {
         "name": "Heimdall",
         "url": "https://heimdall-full-state.nine-chronicles.com/graphql"
-      }
+      },
+      "0x000000000003": {
+        "name": "Thor",
+        "url": "https://thor-full-state.nine-chronicles.com/graphql"
+      },
     }
   };
 
