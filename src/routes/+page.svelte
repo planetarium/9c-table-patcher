@@ -55,11 +55,15 @@
     "preview": {
       "0x100000000000": {
         "name": "Odin (Preview)",
-        "url": "https://odin-preview-rpc-1.nine-chronicles.com/graphql"
+        "url": "https://odin-preview-validator-5.nine-chronicles.com/graphql"
       },
       "0x100000000001": {
         "name": "Heimdall (Preview)",
-        "url": "https://heimdall-preview-rpc-1.nine-chronicles.com/graphql"
+        "url": "https://heimdall-preview-validator-1.nine-chronicles.com/graphql"
+      },
+      "0x100000000003": {
+        "name": "Thor (Preview)",
+        "url": "https://thor-preview-validator-1.nine-chronicles.com/graphql"
       }
     },
     "mainnet": {
