@@ -71,6 +71,14 @@
           "url": "https://thor-preview-validator-1.nine-chronicles.com/graphql"
         }
       },
+    },
+    "9c-dev-v2": {
+      "name": "9c Dev V2",
+      "planets": {
+        "0x100000000000": {
+          "name": "Odin (Dev V2)",
+          "url": "http://k8s-9codinli-validato-aeaeca2683-8e145acafdea8c00.elb.us-east-2.amazonaws.com/graphql"
+        }
       },
     },
     "mainnet": {
