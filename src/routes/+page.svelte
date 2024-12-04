@@ -35,51 +35,61 @@
 
   let planets = {
     "internal": {
-      "0x100000000000": {
-        "name": "Odin (Internal)",
-        "url": "https://odin-internal-rpc-1.nine-chronicles.com/graphql"
-      },
-      "0x100000000001": {
-        "name": "Heimdall (Internal)",
-        "url": "https://heimdall-internal-rpc.nine-chronicles.com/graphql"
-      },
-      "0x100000000002": {
-        "name": "Idun (Internal)",
-        "url": "https://idun-internal-rpc-1.nine-chronicles.com/graphql"
-      },
-      "0x100000000003": {
-        "name": "Thor (Internal)",
-        "url": "https://thor-internal-rpc-1.nine-chronicles.com/graphql"
+      "name": "Internal Network",
+      "planets": {
+        "0x100000000000": {
+          "name": "Odin (Internal)",
+          "url": "https://odin-internal-rpc-1.nine-chronicles.com/graphql"
+        },
+        "0x100000000001": {
+          "name": "Heimdall (Internal)",
+          "url": "https://heimdall-internal-rpc.nine-chronicles.com/graphql"
+        },
+        "0x100000000002": {
+          "name": "Idun (Internal)",
+          "url": "https://idun-internal-rpc-1.nine-chronicles.com/graphql"
+        },
+        "0x100000000003": {
+          "name": "Thor (Internal)",
+          "url": "https://thor-internal-rpc-1.nine-chronicles.com/graphql"
+        }
       },
     },
     "preview": {
-      "0x100000000000": {
-        "name": "Odin (Preview)",
-        "url": "https://odin-preview-validator-5.nine-chronicles.com/graphql"
+      "name": "Preview Network",
+      "planets": {
+        "0x100000000000": {
+          "name": "Odin (Preview)",
+          "url": "https://odin-preview-validator-5.nine-chronicles.com/graphql"
+        },
+        "0x100000000001": {
+          "name": "Heimdall (Preview)",
+          "url": "https://heimdall-preview-validator-1.nine-chronicles.com/graphql"
+        },
+        "0x100000000003": {
+          "name": "Thor (Preview)",
+          "url": "https://thor-preview-validator-1.nine-chronicles.com/graphql"
+        }
       },
-      "0x100000000001": {
-        "name": "Heimdall (Preview)",
-        "url": "https://heimdall-preview-validator-1.nine-chronicles.com/graphql"
       },
-      "0x100000000003": {
-        "name": "Thor (Preview)",
-        "url": "https://thor-preview-validator-1.nine-chronicles.com/graphql"
-      }
     },
     "mainnet": {
-      "0x000000000000": {
-        "name": "Odin",
-        "url": "https://odin-full-state.nine-chronicles.com/graphql"
-      },
-      "0x000000000001": {
-        "name": "Heimdall",
-        "url": "https://heimdall-full-state.nine-chronicles.com/graphql"
-      },
-      "0x000000000003": {
-        "name": "Thor",
-        "url": "https://thor-full-state.nine-chronicles.com/graphql"
-      },
-    }
+      "name": "Mainnet",
+      "planets": {
+        "0x000000000000": {
+          "name": "Odin",
+          "url": "https://odin-full-state.nine-chronicles.com/graphql"
+        },
+        "0x000000000001": {
+          "name": "Heimdall",
+          "url": "https://heimdall-full-state.nine-chronicles.com/graphql"
+        },
+        "0x000000000003": {
+          "name": "Thor",
+          "url": "https://thor-full-state.nine-chronicles.com/graphql"
+        },
+      }
+    },
   };
 
   let prevPlanet;
@@ -87,11 +97,6 @@
 
   let prevNetwork;
   let selectedNetwork;
-  const gqlNodeList = [
-    {value: "internal", name: "Internal Network"},
-    {value: "preview", name: "Preview Network"},
-    {value: "mainnet", name: "Mainnet"}
-  ];
   let targetUrl = "";
 
   let privateKey = "";
@@ -269,13 +274,16 @@
   <div class="sign-part">
     <div class="mb-6">
       <Label for="network">Select Network
-        <Select id="network" class="mt-2" items={gqlNodeList} bind:value={selectedNetwork}
-                on:change={changeNetwork}/>
+        <Select id="network" class="mt-2" bind:value={selectedNetwork} on:change={changeNetwork}>
+          {#each Object.entries(planets) as [planet, data]}
+            <option value={planet}>{data.name}</option>
+            {/each}
+        </Select>
       </Label>
-      {#if ["mainnet", "preview", "internal"].includes(selectedNetwork)}
+      {#if Object.keys(planets).includes(selectedNetwork)}
         <Label for="planet">Select Planet</Label>
         <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
-          {#each Object.entries(planets[selectedNetwork]) as [id, info]}
+          {#each Object.entries(planets[selectedNetwork].planets) as [id, info]}
             <option value={id}>{info.name}</option>
           {/each}
         </Select>
