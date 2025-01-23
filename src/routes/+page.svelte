@@ -110,6 +110,18 @@
   let privateKey = "";
   let account;
   let validPrivateKey;
+  let selectedPlanets = []; // Change to an array
+
+  const addPlanet = () => {
+    if (selectedPlanet && !selectedPlanets.includes(selectedPlanet)) {
+      selectedPlanets = [...selectedPlanets, selectedPlanet];
+    }
+  };
+
+  const removePlanet = () => {
+    selectedPlanets = selectedPlanets.filter(planet => planet !== selectedPlanet);
+  };
+
   $: {
     try {
       account = createAccount(privateKey);
@@ -127,8 +139,7 @@
 
   let validUntil = DateTime.utc().set({hour: 0, minute: 0, second: 0}).plus({days: 30});
 
-  let signedTx = "";
-  let txId = null;
+  let signedTx = {};  // Change to an object to store signed transactions per planet
 
   let signed = false;
   let showSigned = false;
@@ -140,8 +151,7 @@
     csvData = null;
     signed = false;
     showSigned = false;
-    signedTx = "";
-    txId = null;
+    signedTx = {};
     pond.removeFiles();
   }
 
@@ -153,62 +163,73 @@
       alert("Please check uploaded CSV and selected network");
       return;
     }
-    signInProgress = true;
-    const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, targetUrl);
-    if (!unsignedTx) {
+    if (selectedPlanets.length === 0) {
+      alert("Please select at least one planet.");
       return;
     }
+    signInProgress = true;
+    for (const planetId of selectedPlanets) {
+      const planetUrl = planets[selectedNetwork].planets[planetId].url;
+      const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, planetUrl);
+      if (!unsignedTx) {
+        continue;
+      }
+      signedTx[planetId] = await signTransaction(unsignedTx, account);
+    }
+
     signed = true;
-    signedTx = await signTransaction(unsignedTx, account);
     signInProgress = false;
-    return unsignedTx;
   };
 
-  const download = () => {
-    const txBlob = new Blob([signedTx], {type: "text/plain"});
+  const download = (planetId) => {
+    const txBlob = new Blob([signedTx[planetId]], {type: "text/plain"});
     const downloadUrl = window.URL.createObjectURL(txBlob);
     const downloadLink = document.createElement("a");
     downloadLink.download =
-        `signedTx_${csvName}_create_${DateTime.utc().toISO()}_until_${validUntil.toFormat("yyyy-MM-dd")}`;
+            `signedTx_${csvName}_create_${DateTime.utc().toISO()}_until_${validUntil.toFormat("yyyy-MM-dd")}_${planetId}`;
     downloadLink.href = downloadUrl;
     downloadLink.click();
   };
 
-  const deploy = async (e) => {
-    const result = confirm(`Deploy this csv data to ${selectedNetwork}?\n(${targetUrl})`);
-    if (!result) {
-      return;
-    }
+   const deploy = async () => {
+     if (!signed) {
+       alert("Please sign the transactions before deploying.");
+       return;
+     }
 
-    if (targetUrl.includes("full-state")) {
-      const result = confirm(`It seems you're deploying to mainnet. Are you sure?\n(${targetUrl})`);
-      if (!result) {
-        return;
-      }
-    }
+     const result = confirm(`Deploy signed transactions to all selected planets in ${selectedNetwork}?`);
+     if (!result) {
+       return;
+     }
 
-    try {
-      deployInProgress = true;
-      txId = await stageTransaction(signedTx, targetUrl);
-      if (!txId) {
-        return;
-      }
+     let msg = "";
+     for (const planetId of selectedPlanets) {
+       const planetUrl = planets[selectedNetwork].planets[planetId].url;
+       try {
+         deployInProgress = true;
+         let txId = await stageTransaction(signedTx[planetId], planetUrl);
+         if (!txId) {
+           continue;
+         }
 
-      const txResult = await waitForMining(txId, targetUrl);
-      if (txResult.errors) {
-        alert(`Mining monitor failed: ${txResult.errors[0].message}`);
-        return;
-      }
-      if (txResult.txStatus === "SUCCESS") {
-        alert(`Tx added to block: ${txResult.blockIndex}`);
-        reset();
-      } else {
-        alert(`Tx add failed: ${txResult.txStatus}::${txResult.exceptionNames[0]}}`);
-      }
-    } finally {
-      deployInProgress = false;
-    }
-  };
+         const txResult = await waitForMining(txId, planetUrl);
+         if (txResult.errors) {
+           msg += `${txId}: Mining monitor failed on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.errors[0].message}\n`;
+           continue;
+         }
+         if (txResult.txStatus === "SUCCESS") {
+           msg += `${txId}: Tx added to block on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.blockIndex}\n`;
+         } else {
+           msg += `${txId}: Tx add failed on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.txStatus}::${txResult.exceptionNames[0]}}\n`;
+         }
+       } finally {
+         deployInProgress = false;
+       }
+     }
+     alert(msg);
+     reset();
+   };
+
 
   const changeNetwork = async () => {
     if (signed) {
@@ -238,9 +259,8 @@
   };
 
   const clearSign = () => {
-    privateKey = null;
     signed = false;
-    signedTx = "";
+    signedTx = {};
     showSigned = false;
     deployInProgress = false;
   };
@@ -289,12 +309,27 @@
         </Select>
       </Label>
       {#if Object.keys(planets).includes(selectedNetwork)}
-        <Label for="planet">Select Planet</Label>
-        <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
-          {#each Object.entries(planets[selectedNetwork].planets) as [id, info]}
-            <option value={id}>{info.name}</option>
-          {/each}
-        </Select>
+        <!-- Update the UI -->
+        <div class="mb-6">
+          <Label for="planet">Select Planet</Label>
+          <Select id="planet" class="mt-2" bind:value={selectedPlanet} on:change={changePlanet}>
+            {#each Object.entries(planets[selectedNetwork].planets) as [id, info]}
+              <option value={id}>{info.name}</option>
+            {/each}
+          </Select>
+          <Button on:click={addPlanet}>+</Button>
+          <Button on:click={removePlanet}>-</Button>
+        </div>
+
+        <!-- Display selected planets -->
+        <div>
+          <h3>Selected Planets:</h3>
+          <ul>
+            {#each selectedPlanets as planetId}
+              <li>{planets[selectedNetwork].planets[planetId].name}</li>
+            {/each}
+          </ul>
+        </div>
       {/if}
     </div>
     <div class="mb-6">
@@ -338,7 +373,12 @@
         <Button color="red" on:click={clearSign}>Clear signed data</Button>
       {/if}
       {#if showSigned}
-        <Textarea class="h-96" readonly id="signed-tx" bind:value={signedTx}/>
+        {#each selectedPlanets as planetId}
+          <div class="mb-4">
+            <h4>Signed Tx for {planets[selectedNetwork].planets[planetId].name}:</h4>
+            <Textarea class="h-48" readonly bind:value={signedTx[planetId]}/>
+          </div>
+        {/each}
       {/if}
     </div>
     {#if signed}
@@ -346,7 +386,9 @@
         The transaction will valid until {validUntil.plus({days: 1}).toFormat("yyyy-MM-dd HH:mm:ssZZ")}
       </div>
       <div class="mb-6 grid grid-flow-col gap-4">
-        <Button color="green" on:click={download}>Download Signed Tx</Button>
+        {#each selectedPlanets as planetId}
+          <Button color="green" on:click={() => download({planetId})}>Download Signed Tx for {planets[selectedNetwork].planets[planetId].name}</Button>
+        {/each}
         <Button color="red" disabled={deployInProgress} on:click={deploy}>
           {#if !deployInProgress}
             Deploy
@@ -356,9 +398,6 @@
           {/if}
         </Button>
       </div>
-    {/if}
-    {#if txId}
-      <div>Tx ID: <span id="tx_id">{txId || ""}</span></div>
     {/if}
   </div>
 </div>
