@@ -111,6 +111,7 @@
   let account;
   let validPrivateKey;
   let selectedPlanets = []; // Change to an array
+  let txIds = {};
 
   const addPlanet = () => {
     if (selectedPlanet && !selectedPlanets.includes(selectedPlanet)) {
@@ -168,6 +169,8 @@
       return;
     }
     signInProgress = true;
+    // reset previous txIds
+    txIds = {};
     for (const planetId of selectedPlanets) {
       const planetUrl = planets[selectedNetwork].planets[planetId].url;
       const unsignedTx = await createActionTx(account, csvName, csvData, validUntil, planetUrl);
@@ -211,6 +214,7 @@
          if (!txId) {
            continue;
          }
+         txIds[planetId] = txId;
 
          const txResult = await waitForMining(txId, planetUrl);
          if (txResult.errors) {
@@ -397,6 +401,17 @@
             Deploying...
           {/if}
         </Button>
+      </div>
+    {/if}
+    <!-- Display txId for each planet after deployment -->
+    {#if Object.keys(txIds).length > 0}
+      <div class="mb-6">
+        <h3>Transaction IDs:</h3>
+        <ul>
+          {#each Object.entries(txIds) as [planetId, txId]}
+            <li>{planets[selectedNetwork].planets[planetId].name}: {txId}</li>
+          {/each}
+        </ul>
       </div>
     {/if}
   </div>
