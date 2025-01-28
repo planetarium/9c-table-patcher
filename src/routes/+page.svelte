@@ -259,7 +259,7 @@
     }
 
     prevPlanet = selectedPlanet;
-    targetUrl = planets[selectedNetwork][selectedPlanet].url;
+    targetUrl = planets[selectedNetwork].planets[selectedPlanet].url;
   };
 
   const clearSign = () => {
