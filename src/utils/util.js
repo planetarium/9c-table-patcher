@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import AWS from 'aws-sdk';
+import {S3Client, PutObjectCommand} from "@aws-sdk/client-s3";
 
 export const sleep = (n) => {
   return new Promise((r) => setTimeout(r, n * 1000));
@@ -26,20 +26,23 @@ export const getJWT = (secret) => {
 
 export const uploadCsvToR2 = async (bucketName, key, fileContent, accessKeyId, secretAccessKey) => {
   try {
-    const r2 = new AWS.S3({
+    const r2 = new S3Client({
       endpoint: "https://1cd1f38b21c0bfdde9501f7d8e43b663.r2.cloudflarestorage.com",
-      accessKeyId: accessKeyId,
-      secretAccessKey: secretAccessKey,
+      region: "us-east-1",
+      credentials: {
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey,
+      }
     });
 
-    const params = {
+    const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: key,
       Body: fileContent,
       ContentType: 'text/csv',
-    };
+    });
 
-    await r2.upload(params).promise();
+    await r2.send(command);
     return `File uploaded successfully at ${key}`;
   } catch (error) {
     return `Error uploading file ${error}`;
