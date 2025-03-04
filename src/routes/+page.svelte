@@ -8,7 +8,7 @@
   import {createAccount} from '@planetarium/account-raw';
   import {signTransaction} from "@planetarium/sign";
   import {DateTime} from "luxon";
-  import {parseCsv} from "../utils/util.js";
+  import {parseCsv, uploadCsvToR2} from "../utils/util.js";
   import {
     Alert,
     Button,
@@ -112,6 +112,8 @@
   let validPrivateKey;
   let selectedPlanets = []; // Change to an array
   let txIds = {};
+  let accessKeyId = "";
+  let secretAccessKey = "";
 
   const addPlanet = () => {
     if (selectedPlanet && !selectedPlanets.includes(selectedPlanet)) {
@@ -223,6 +225,7 @@
          }
          if (txResult.txStatus === "SUCCESS") {
            msg += `${txId}: Tx added to block on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.blockIndex}\n`;
+           msg += await uploadCsvToR2("9c-table-sheets", `${planetId}/${csvName}.csv`, csvData, accessKeyId, secretAccessKey);
          } else {
            msg += `${txId}: Tx add failed on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.txStatus}::${txResult.exceptionNames[0]}}\n`;
          }
@@ -350,6 +353,20 @@
           <span class="font-medium">Invalid PrivateKey!</span> Please check private key again!
         </Alert>
       {/if}
+    </div>
+    <div class="mb-6">
+      <Label for="access-key-id">AccessKeyId</Label>
+      <Input id="access-key-id" type="text" bind:value={accessKeyId}>
+        <button slot="right">
+        </button>
+      </Input>
+      <Label for="secret-access-key">SecretAccessKey</Label>
+      <Input id="secret-access-key" type="password" bind:value={secretAccessKey}>
+        <button slot="right" on:mousedown={() => {document.getElementById('secret-access-key').type="text"}}
+                on:mouseup={() => {document.getElementById("secret-access-key").type = "password"}}>
+          <EyeRegular/>
+        </button>
+      </Input>
     </div>
     <!--        <div class="mb-6">-->
     <!--            <Datepicker datepickerFormat="yyyy-mm-dd" bind:value={validUntil}></Datepicker>-->
