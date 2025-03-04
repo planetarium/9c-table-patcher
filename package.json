@@ -32,9 +32,11 @@
   "dependencies": {
     "@planetarium/account-raw": "^0.0.3",
     "@planetarium/sign": "^0.0.11",
+    "aws-sdk": "^2.1692.0",
     "filepond": "^4.30.4",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.2.1",
     "svelte-filepond": "^0.2.0"
-  }
+  },
+  "packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }
