@@ -8,7 +8,7 @@
   import {createAccount} from '@planetarium/account-raw';
   import {signTransaction} from "@planetarium/sign";
   import {DateTime} from "luxon";
-  import {parseCsv, uploadCsvToR2} from "../utils/util.js";
+  import {parseCsv, requestCachePurge, uploadCsvToR2} from "../utils/util.js";
   import {
     Alert,
     Button,
@@ -114,6 +114,10 @@
   let txIds = {};
   let accessKeyId = "";
   let secretAccessKey = "";
+  let cloudflareEmail = "";
+  let cloudflareApiKey = "";
+  let cloudflarePond;
+  let configData = {};
 
   const addPlanet = () => {
     if (selectedPlanet && !selectedPlanets.includes(selectedPlanet)) {
@@ -225,7 +229,9 @@
          }
          if (txResult.txStatus === "SUCCESS") {
            msg += `${txId}: Tx added to block on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.blockIndex}\n`;
-           msg += await uploadCsvToR2("9c-table-sheets", `${planetId}/${csvName}.csv`, csvData, accessKeyId, secretAccessKey);
+           const key = `${planetId}/${csvName}.csv`;
+           msg += await uploadCsvToR2("9c-table-sheets", key, csvData, accessKeyId, secretAccessKey);
+           msg += await requestCachePurge("https://6scf5iiccwusnegfpylppf34iy0whgbn.lambda-url.us-east-2.on.aws/", cloudflareEmail, cloudflareApiKey, key);
          } else {
            msg += `${txId}: Tx add failed on ${planets[selectedNetwork].planets[planetId].name}: ${txResult.txStatus}::${txResult.exceptionNames[0]}}\n`;
          }
@@ -271,6 +277,24 @@
     showSigned = false;
     deployInProgress = false;
   };
+
+  const handleAddJson = async (err, fileItem) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    const file = fileItem.file;
+    const text = await file.text();
+    try {
+      configData = JSON.parse(text);
+      accessKeyId = configData.accessKeyId || "";
+      secretAccessKey = configData.secretAccessKey || "";
+      cloudflareEmail = configData.cloudflareEmail || "";
+      cloudflareApiKey = configData.cloudflareApiKey || "";
+    } catch (e) {
+      console.error("Invalid JSON", e);
+    }
+  }
 </script>
 
 <Heading tag="h2" class="mb-4">Make new transaction to patch table csv</Heading>
@@ -355,15 +379,30 @@
       {/if}
     </div>
     <div class="mb-6">
-      <Label for="access-key-id">AccessKeyId</Label>
-      <Input id="access-key-id" type="text" bind:value={accessKeyId}>
-        <button slot="right">
-        </button>
-      </Input>
-      <Label for="secret-access-key">SecretAccessKey</Label>
+      <FilePond bind:this={cloudflarePond}
+                allowmultiple=false instantupload=false
+                acceptedfiletypes={['application/json']}
+                onaddfile={handleAddJson}
+      />
+      <h3>Uploaded JSON Data:</h3>
+      <Label for="access-key-id">Access Key ID</Label>
+      <Input id="access-key-id" type="text" bind:value={accessKeyId} />
+
+      <Label for="secret-access-key">Secret Access Key</Label>
       <Input id="secret-access-key" type="password" bind:value={secretAccessKey}>
         <button slot="right" on:mousedown={() => {document.getElementById('secret-access-key').type="text"}}
                 on:mouseup={() => {document.getElementById("secret-access-key").type = "password"}}>
+          <EyeRegular/>
+        </button>
+      </Input>
+
+      <Label for="cloudflare-email">Cloudflare Email</Label>
+      <Input id="cloudflare-email" type="text" bind:value={cloudflareEmail} />
+
+      <Label for="cloudflare-api-key">Cloudflare API Key</Label>
+      <Input id="cloudflare-api-key" type="password" bind:value={cloudflareApiKey}>
+        <button slot="right" on:mousedown={() => {document.getElementById('cloudflare-api-key').type="text"}}
+                on:mouseup={() => {document.getElementById("cloudflare-api-key").type = "password"}}>
           <EyeRegular/>
         </button>
       </Input>

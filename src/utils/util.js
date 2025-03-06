@@ -48,3 +48,24 @@ export const uploadCsvToR2 = async (bucketName, key, fileContent, accessKeyId, s
     return `Error uploading file ${error}`;
   }
 };
+
+export const requestCachePurge = async (lambdaEndpoint, cloudflareEmail, cloudflareApiKey, key) => {
+  try {
+    const response = await fetch(lambdaEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        cloudflareEmail,
+        cloudflareApiKey,
+        key
+      })
+    });
+
+    const result = await response.json();
+    return result.message;
+  } catch (error) {
+    return `Error requesting cache purge: ${error.message}`;
+  }
+};
